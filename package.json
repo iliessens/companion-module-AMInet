@@ -1,19 +1,19 @@
 {
-  "name": "aminet",
-  "version": "1.0.0",
-  "description": "",
-  "keywords": [
-		"Protocol",
-		"Playback"
-  ],
-  "manufacturer", "Alcorn McBride",
-  "shortname": "AMInet",
-  "homepage": "https://alcorn.com/",
-  "description": "Module for the AMInet protocol used by several Alcorn McBride products.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Imre Liessens",
-  "license": "ISC"
+	"name": "aminet",
+	"version": "1.0.0",
+	"api_version": "1.0.0",
+	"keywords": [
+		"Protocol"
+	],
+	"manufacturer": "Alcorn McBride",
+	"product": "AMInet",
+	"shortname": "AMInet",
+	"homepage": "http://alcorn.com/",
+	"description": "Companion module for AMInet protocol for Alcorn McBride media servers.",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Imre Liessens",
+	"license": "ISC"
 }
