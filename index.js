@@ -68,8 +68,11 @@ instance.prototype.actions = function(system) {
 						width:   12,
 						default: 'PL',
 						choices:	[
-							{ id: 'PL',		label: 'Start Playing' },
-							{ id: 'RJ',		label: 'Stop Playing' },
+							{ id: 'PL',		label: 'Start' },
+							{ id: 'RJ',		label: 'Stop' },
+							{ id: 'LP',		label: 'Loop play' },
+							{ id: 'ST',		label: 'Still' },
+							{ id: 'PA',		label: 'Pause' },
 						]
 					},
 					{
@@ -77,8 +80,93 @@ instance.prototype.actions = function(system) {
 						label:   'Choose Channel',
 						id:      'channel',
 						width:   6,
-						default: '1',
-						regex: self.REGEX_NUMBER
+						default: '1'
+					},
+			]
+		},
+
+		'toggleOption':    {
+			label: 'Enable/disable audio/video',
+			options: [
+				{
+					type:    'dropdown',
+					label:   'Choose stream to control',
+					id:      'stream',
+					width:   12,
+					default: 'PL',
+					choices:	[
+						{ id: 'IM',		label: 'Image' },
+						{ id: 'VD',		label: 'Video' },
+						{ id: 'AD',		label: 'Audio' },
+					]
+				},
+				{
+					type:    'dropdown',
+					label:   'Choose action',
+					id:      'action',
+					width:   12,
+					default: 'PL',
+					choices:	[
+						{ id: '0',		label: 'Off' },
+						{ id: '1',		label: 'On' }
+					]
+				},
+				{
+					type:    'textinput',
+					label:   'Choose Channel',
+					id:      'channel',
+					width:   6,
+					default: '1'
+				},
+			]
+		},
+
+		'selectFile':    {
+			label: 'Select File',
+			options: [
+					{
+						type:    'textinput',
+						label:   'Filename or number',
+						id:      'name',
+						width:   12
+					},
+					{
+						type:    'textinput',
+						label:   'Choose Channel',
+						id:      'channel',
+						width:   6,
+						default: '1'
+					}
+			]
+		},
+
+		'bannerText':    {
+			label: 'Set Banner Text',
+			options: [
+					{
+						type:    'textinput',
+						label:   'Text',
+						id:      'text',
+						width:   12
+					},
+					{
+						type:    'textinput',
+						label:   'Choose Channel',
+						id:      'channel',
+						width:   6,
+						default: '1'
+					}
+			]
+		},
+
+		'customCmd':    {
+			label: 'Custom Command',
+			options: [
+					{
+						type:    'textinput',
+						label:   'Type Command',
+						id:      'command',
+						width:   12
 					},
 			]
 		}
@@ -154,10 +242,34 @@ instance.prototype.action = function(action) {
 		case 'predefinedCmd':
 			cmd += action.options.channel + action.options.command;
 			break;
+
+		case 'selectFile':
+			var name = action.options.name;
+			if(isNaN(name)) {
+				cmd += '"' + name + '"';
+			}
+			else {
+				cmd += name;
+			}
+			cmd += action.options.channel + "SE";
+			break;
+
+		case 'toggleOption':
+			cmd += action.options.action + action.options.channel + action.options.stream;
+			break;
+
+		case 'bannerText':
+			cmd += action.options.text + action.options.channel + "BT";
+			break;
+
+		case 'customCmd':
+			cmd += action.options.command;
+			break;
 	}
 
 	//add line break
 	cmd += '\r';
+	debug("Command: ",cmd);
 
 	if (cmd !== undefined) {
 		self.sendCommand(cmd);
