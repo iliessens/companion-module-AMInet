@@ -46,25 +46,45 @@ instance.prototype.initUDP = function() {
 		self.socket.bind({port: 2639});
 
 		self.socket.on('message', function(message, remote) {
-			if(self.awaitACK) {
-				if(message == "R\r") {
-					self.status(self.STATUS_OK);
-				}
-				else {
-					self.status(self.STATUS_WARNING);
-					self.log("error","Received unexpected response: "+message);
-				}
-				self.awaitACK = false;
+			if(message == "R\r") {
+				self.status(self.STATUS_OK);
 			}
 			else {
-				self.log("info","Received "+message);
+				if(self.awaitACK) {
+					//Predefined commands only return ACK
+					self.status(self.STATUS_WARNING);
+					self.log("error","Received unexpected response: "+self.parseError(message));
+				}
+				else {
+					//Custom command might return other values
+					if(message.readUInt8() == 0x45) {
+						self.log("error",self.parseError(message));
+					}
+					else {
+						self.log("info","Received "+message);
+					}
+				}
 			}
+			self.awaitACK = false;
 		});
 
 		self.socket.on('error', function(error) {
 			self.status(self.STATUS_ERROR);
 			self.awaitACK = false;
+			self.log("error","Connection error");
 		});
+	}
+}
+
+instance.prototype.parseError = function(errMsg) {
+	console.log(Buffer.from(errMsg));
+	switch( errMsg.toString()) {
+		case "E00\r": return "Invalid Channel Number";
+		case "E01\r": return "Channel Hardware Error";
+		case "E04\r": return "Invalid or Unsupported Command";
+		case "E05\r": return "Invalid Group Number";
+		case "E12\r": return "Search Error";
+		default: return errMsg;
 	}
 }
 
@@ -77,7 +97,7 @@ instance.prototype.config_fields = function () {
 			id:    'info',
 			width: 12,
 			label: 'Information',
-			value: 'This module implements the AMInet protocol for control of media servers.'
+			value: 'This module implements the AMInet protocol for control of  Alcorn McBride media servers.'
 		},
 		{
 			type:  'textinput',
@@ -101,7 +121,7 @@ instance.prototype.actions = function(system) {
 	self.system.emit('instance_actions', self.id, {
 
 		'predefinedCmd':    {
-			label: 'Choose Commands',
+			label: 'Control Playback',
 			options: [
 					{
 						type:    'dropdown',
@@ -222,7 +242,6 @@ instance.prototype.calculateChecksum = function(msgBuffer) {
 	for(i = 1; i < msgBuffer.length; i++) {
 		sumValue += msgBuffer.readUInt8(i);
 	}
-	console.log("Checksum val", sumValue);
 
 	if(sumValue >= 65536) {
 		// 4 byte checksum
@@ -258,7 +277,7 @@ instance.prototype.sendCommand = function(cmd) {
 
 	message = Buffer.concat([message, checksum, trailer]);
 
-	console.log(message);
+	console.log("Command to transmit: ",message);
 
 	self.socket.send(message, 2639, self.config.host);
 };
@@ -304,7 +323,7 @@ instance.prototype.action = function(action) {
 
 	//add line break
 	cmd += '\r';
-	debug("Command: ",cmd);
+	console.log("Command: "+cmd);
 
 	if (cmd !== undefined) {
 		self.sendCommand(cmd);
