@@ -17,6 +17,8 @@ function instance(system, id, config) {
 instance.prototype.updateConfig = function(config) {
 	var self = this;
 	self.config = config;
+
+	self.initUDP();
 };
 instance.prototype.init = function() {
 	var self = this;
@@ -25,7 +27,46 @@ instance.prototype.init = function() {
 
 	debug = self.debug;
 	log   = self.log;
+
+	self.initUDP();
 };
+
+instance.prototype.initUDP = function() {
+	var self = this;
+
+	if (self.socket !== undefined) {
+		self.socket.close();
+		delete self.socket;
+	}
+
+	if (self.config.host) {
+		self.awaitACK = false;
+
+		self.socket = dgram.createSocket('udp4');
+		self.socket.bind({port: 2639});
+
+		self.socket.on('message', function(message, remote) {
+			if(self.awaitACK) {
+				if(message == "R\r") {
+					self.status(self.STATUS_OK);
+				}
+				else {
+					self.status(self.STATUS_WARNING);
+					self.log("error","Received unexpected response: "+message);
+				}
+				self.awaitACK = false;
+			}
+			else {
+				self.log("info","Received "+message);
+			}
+		});
+
+		self.socket.on('error', function(error) {
+			self.status(self.STATUS_ERROR);
+			self.awaitACK = false;
+		});
+	}
+}
 
 // Return config fields for web config
 instance.prototype.config_fields = function () {
@@ -51,6 +92,7 @@ instance.prototype.config_fields = function () {
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
+	self.socket.close();
 	debug("destroy");
 };
 
@@ -205,7 +247,7 @@ instance.prototype.calculateChecksum = function(msgBuffer) {
 }
 
 instance.prototype.sendCommand = function(cmd) {
-	self = this;
+	var self = this;
 
 	//Fixed preamble
 	var preamble = Buffer.from([0xF1,0x01, 0x04]);
@@ -218,18 +260,7 @@ instance.prototype.sendCommand = function(cmd) {
 
 	console.log(message);
 
-	var client = dgram.createSocket('udp4');
-	client.send(message, 0, message.length, 2639, self.config.host, function(err, bytes) {
-		if (err) {
-			self.status(self.STATUS_ERROR);
-			self.log(err);
-		}
-		else {
-			console.log('UDP message sent OK');
-			client.close();
-			self.status(self.STATUS_OK);
-		}
-	  });
+	self.socket.send(message, 2639, self.config.host);
 };
 
 instance.prototype.action = function(action) {
@@ -241,6 +272,7 @@ instance.prototype.action = function(action) {
 	switch (action.action) {
 		case 'predefinedCmd':
 			cmd += action.options.channel + action.options.command;
+			self.awaitACK = true;
 			break;
 
 		case 'selectFile':
@@ -252,14 +284,17 @@ instance.prototype.action = function(action) {
 				cmd += name;
 			}
 			cmd += action.options.channel + "SE";
+			self.awaitACK = true;
 			break;
 
 		case 'toggleOption':
 			cmd += action.options.action + action.options.channel + action.options.stream;
+			self.awaitACK = true;
 			break;
 
 		case 'bannerText':
 			cmd += action.options.text + action.options.channel + "BT";
+			self.awaitACK = true;
 			break;
 
 		case 'customCmd':
