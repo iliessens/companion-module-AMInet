@@ -112,7 +112,10 @@ instance.prototype.config_fields = function () {
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
-	self.socket.close();
+	if (self.socket !== undefined) {
+		self.socket.close();
+		delete self.socket;
+	}
 	debug("destroy");
 };
 
